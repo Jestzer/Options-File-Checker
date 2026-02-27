@@ -454,6 +454,7 @@ function gatherData() {
 
                 let linesThatSubtractSeats = []; // This needs to be set here even if it's just going to be empty until the analyzer class potentially fills it.
                 let originalLicenseFileSeatCount = seatCount;
+                let borrowingEnabled = currentLine.includes("BORROW=");
 
                 // Ready for entry into the object.
                 licenseFileDictionary[licenseLineIndex] = {
@@ -463,7 +464,8 @@ function gatherData() {
                     licenseOffering,
                     licenseNumber,
                     linesThatSubtractSeats,
-                    originalLicenseFileSeatCount
+                    originalLicenseFileSeatCount,
+                    borrowingEnabled
                 };
 
 
@@ -689,8 +691,11 @@ function gatherData() {
                 let productFoundInMasterList = masterProductsList.some(productFromList => productFromList === productName);
 
                 if (!productFoundInMasterList) {
-                    errorMessageFunction(`There is an issue with the options file: you have specified a product that does not exist. The product in question is \"${productName}\" ` +
-                        `Ensure there are no typos, the product name comes from the start of the INCREMENT line in the license file, and it has the exact same case-sensitivity. ` +
+                    let suggestion = findClosestProduct(productName, masterProductsList);
+                    let suggestionText = suggestion ? ` Did you mean \"${suggestion}\"?` : "";
+                    errorMessageFunction(`There is an issue with the options file: you have specified a product that does not exist. The product in question is \"${productName}\". ` +
+                        `Ensure there are no typos, the product name comes from the start of the INCREMENT line in the license file, and it has the exact same case-sensitivity.` +
+                        `${suggestionText} ` +
                         `The line in question reads as this: \"${currentLine}\".`);
                     return;
                 }
@@ -1127,9 +1132,51 @@ function gatherData() {
                 || currentLine.trim().startsWith("DEFAULT ") || currentLine.trim().startsWith("HIDDEN ") || currentLine.trim().startsWith("MAX_BORROW_HOURS") || currentLine.trim().startsWith('#')
                 || !currentLine || !currentLine.trim() || currentLine.trim().startsWith("BORROW_LOWWATER ")) {
 
-                // Other valid line beginnings that I currently do nothing with.
                 lastLineWasAGroupLine = false;
                 lastLineWasAHostGroupLine = false;
+
+                // Basic syntax validation for TIMEOUTALL, TIMEOUT, and LINGER.
+                let trimmedLine = currentLine.trim();
+                if (trimmedLine.startsWith("TIMEOUTALL ")) {
+                    let lineParts = trimmedLine.split(" ").filter(part => part.trim() !== "");
+                    if (lineParts.length < 2) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUTALL line is missing the timeout value (in seconds). " +
+                            `The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                    let timeoutValue = Number(lineParts[1]);
+                    if (!Number.isInteger(timeoutValue) || timeoutValue < 0) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUTALL line has an invalid timeout value. " +
+                            `It must be a positive integer (in seconds). The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                } else if (trimmedLine.startsWith("TIMEOUT ")) {
+                    let lineParts = trimmedLine.split(" ").filter(part => part.trim() !== "");
+                    if (lineParts.length < 3) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUT line is missing information. " +
+                            `A TIMEOUT line should be formatted as: TIMEOUT product seconds. The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                    let timeoutValue = Number(lineParts[2]);
+                    if (!Number.isInteger(timeoutValue) || timeoutValue < 0) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUT line has an invalid timeout value. " +
+                            `It must be a positive integer (in seconds). The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                } else if (trimmedLine.startsWith("LINGER ")) {
+                    let lineParts = trimmedLine.split(" ").filter(part => part.trim() !== "");
+                    if (lineParts.length < 3) {
+                        errorMessageFunction("There is an issue with the options file: your LINGER line is missing information. " +
+                            `A LINGER line should be formatted as: LINGER product seconds. The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                    let lingerValue = Number(lineParts[2]);
+                    if (!Number.isInteger(lingerValue) || lingerValue < 0) {
+                        errorMessageFunction("There is an issue with the options file: your LINGER line has an invalid linger value. " +
+                            `It must be a positive integer (in seconds). The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                }
             } else if (lastLineWasAGroupLine === true) {
                 let lineWithTabsRemoved = currentLine.replaceAll("\t", "");
                 lineWithTabsRemoved = lineWithTabsRemoved.replaceAll("\n", "");
@@ -1206,6 +1253,50 @@ function gatherData() {
     } catch (rawErrorMessage) {
         errorMessageFunction(`Something broke really badly in the Gatherer. What a bummer. Here's the automatically generated error: ${rawErrorMessage}`);
     }
+}
+
+// Find the closest matching product name from the master list using Levenshtein distance.
+function findClosestProduct(input, masterList) {
+    let bestMatch = null;
+    let bestDistance = Infinity;
+    let inputLower = input.toLowerCase();
+
+    for (let product of masterList) {
+        let productLower = product.toLowerCase();
+        let distance = levenshteinDistance(inputLower, productLower);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestMatch = product;
+        }
+    }
+
+    // Only suggest if the distance is reasonable (less than 40% of the input length).
+    let threshold = Math.max(3, Math.ceil(input.length * 0.4));
+    return bestDistance <= threshold ? bestMatch : null;
+}
+
+function levenshteinDistance(a, b) {
+    let matrix = [];
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
 }
 
 // Parse "dd-MMM-yyyy" into Date.

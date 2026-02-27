@@ -87,6 +87,27 @@ if (analyzerBtn) {
                     }
                 }
 
+                if (window.includeExcludeConflicts && window.includeExcludeConflicts.length > 0) {
+                    for (let conflict of window.includeExcludeConflicts) {
+                        outputTextbox.textContent += `Warning: you have both an INCLUDE and EXCLUDE for ${conflict.productName} targeting ${conflict.clientType} ` +
+                            `${conflict.clientSpecified}. The EXCLUDE will take priority and the user will be denied access.\n`;
+                    }
+                }
+
+                if (window.duplicateDirectiveWarnings && window.duplicateDirectiveWarnings.length > 0) {
+                    for (let duplicate of window.duplicateDirectiveWarnings) {
+                        outputTextbox.textContent += `Warning: you have a duplicate ${duplicate.directiveType} line for ${duplicate.productName} targeting ${duplicate.clientType} ` +
+                            `${duplicate.clientSpecified}. Each duplicate line will separately subtract from the seat count.\n`;
+                    }
+                }
+
+                if (window.borrowNotSupportedWarnings && window.borrowNotSupportedWarnings.length > 0) {
+                    for (let borrowWarning of window.borrowNotSupportedWarnings) {
+                        outputTextbox.textContent += `Warning: you have an INCLUDE_BORROW for ${borrowWarning.productName}, but borrowing is not enabled ` +
+                            `for this product in the license file (no BORROW= found on its INCREMENT line). This INCLUDE_BORROW will have no effect.\n`;
+                    }
+                }
+
                 let cnOverdraftWarningHasBeenDisplayed = false;
                 let nnuOverdraftWarningHasBeenDisplayed = false;
 

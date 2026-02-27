@@ -76,6 +76,93 @@ function analyzeData() {
             return;
         }
 
+        // Check for INCLUDE + EXCLUDE conflicts (same product + client type + client specified). EXCLUDE takes priority in FlexLM.
+        window.includeExcludeConflicts = [];
+        if (Object.keys(includeDictionary).length > 0 && Object.keys(excludeDictionary).length > 0) {
+            let includeEntries = Object.entries(includeDictionary);
+            let excludeEntries = Object.entries(excludeDictionary);
+            for (let [includeKey, includeEntry] of includeEntries) {
+                for (let [excludeKey, excludeEntry] of excludeEntries) {
+                    if (includeEntry.productName === excludeEntry.productName &&
+                        includeEntry.clientType === excludeEntry.clientType &&
+                        includeEntry.clientSpecified === excludeEntry.clientSpecified) {
+                        let conflictAlreadyRecorded = window.includeExcludeConflicts.some(c =>
+                            c.productName === includeEntry.productName &&
+                            c.clientType === includeEntry.clientType &&
+                            c.clientSpecified === includeEntry.clientSpecified);
+                        if (!conflictAlreadyRecorded) {
+                            window.includeExcludeConflicts.push({
+                                productName: includeEntry.productName,
+                                clientType: includeEntry.clientType,
+                                clientSpecified: includeEntry.clientSpecified
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for duplicate directives (same product + client type + client specified within the same directive type).
+        window.duplicateDirectiveWarnings = [];
+        let dictionariesToCheckForDuplicates = [
+            { dict: includeDictionary, name: "INCLUDE", productField: "productName" },
+            { dict: includeBorrowDictionary, name: "INCLUDE_BORROW", productField: "productName" },
+            { dict: excludeDictionary, name: "EXCLUDE", productField: "productName" },
+            { dict: excludeBorrowDictionary, name: "EXCLUDE_BORROW", productField: "productName" },
+        ];
+        for (let { dict, name, productField } of dictionariesToCheckForDuplicates) {
+            let entries = Object.entries(dict);
+            let seen = {};
+            for (let [key, entry] of entries) {
+                let compositeKey = `${entry[productField]}|${entry.licenseNumber}|${entry.productKey}|${entry.clientType}|${entry.clientSpecified}`;
+                if (seen[compositeKey]) {
+                    let duplicateAlreadyRecorded = window.duplicateDirectiveWarnings.some(d =>
+                        d.directiveType === name && d.compositeKey === compositeKey);
+                    if (!duplicateAlreadyRecorded) {
+                        window.duplicateDirectiveWarnings.push({
+                            directiveType: name,
+                            compositeKey: compositeKey,
+                            productName: entry[productField],
+                            clientType: entry.clientType,
+                            clientSpecified: entry.clientSpecified
+                        });
+                    }
+                } else {
+                    seen[compositeKey] = true;
+                }
+            }
+        }
+
+        // Check for INCLUDE_BORROW on products that don't support borrowing.
+        window.borrowNotSupportedWarnings = [];
+        if (Object.keys(includeBorrowDictionary).length > 0) {
+            let includeBorrowEntries = Object.entries(includeBorrowDictionary);
+            let licenseFileDictionaryEntries = Object.entries(licenseFileDictionary);
+            for (let [borrowKey, borrowEntry] of includeBorrowEntries) {
+                let borrowProductName = borrowEntry.productName;
+                let borrowingSupported = false;
+                let productFoundInLicense = false;
+                for (let [licenseKey, licenseEntry] of licenseFileDictionaryEntries) {
+                    if (licenseEntry.productName === borrowProductName) {
+                        productFoundInLicense = true;
+                        if (licenseEntry.borrowingEnabled === true) {
+                            borrowingSupported = true;
+                            break;
+                        }
+                    }
+                }
+                if (productFoundInLicense && !borrowingSupported) {
+                    let alreadyRecorded = window.borrowNotSupportedWarnings.some(w => w.productName === borrowProductName);
+                    if (!alreadyRecorded) {
+                        window.borrowNotSupportedWarnings.push({
+                            productName: borrowProductName,
+                            line: borrowEntry.savedLine
+                        });
+                    }
+                }
+            }
+        }
+
         // Now we may subtract seats.
         if (Object.keys(includeDictionary).length > 0) {
             dictionaryToUse = includeDictionary;
