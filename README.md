@@ -16,3 +16,9 @@ Notes for user:
 
 To-do:
 - Identify bad INCREMENT lines (possibly counting lineParts?)
+- Investigate: the Checker and Editor have different master product lists (~280 vs ~171 products). Audit both against MathWorks' current product catalog and unify them.
+- Investigate: detect duplicate members within a GROUP definition (e.g., GROUP engineers alice bob alice). This inflates the member count and causes incorrect seat subtraction since FlexLM silently deduplicates.
+- Investigate: RESERVE + INCLUDE double-counting. If you both RESERVE seats for a group and INCLUDE the same product for the same group, both currently subtract seats. In FlexLM, RESERVE carves out seats that are then used by INCLUDE, so they may overlap rather than stack.
+- Investigate: inline comments (# at the end of directive lines). FlexLM supports trailing comments like "INCLUDE MATLAB USER alice # Senior engineer". Verify the parser correctly strips these rather than treating # and everything after it as part of the client specification.
+- Investigate: username/hostname character validation. FlexLM doesn't allow spaces in usernames (already noted), but characters like @, ;, or unicode in usernames/hostnames could cause silent failures. Consider validating that these contain only valid FlexLM characters.
+- Investigate: line continuation (\) support on non-GROUP/HOST_GROUP lines. FlexLM supports \ continuation on any line, but the parser currently only handles this for GROUP and HOST_GROUP. Other multi-line directives could be misparsed.
