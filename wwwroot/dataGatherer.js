@@ -97,6 +97,49 @@ function gatherData() {
             return;
         }
 
+        // Pre-scan INCREMENT lines for Individual/Designated Computer indicators
+        // that the text-level checks above do not catch.
+        {
+            const hasTMWArchive = window.licenseFileText.includes("TMW_Archive");
+            for (let i = 0; i < licenseFileContentsLines.length; i++) {
+                const line = licenseFileContentsLines[i];
+                const trimmed = line.trim();
+                if (!trimmed.startsWith("INCREMENT")) continue;
+
+                const parts = line.split(" ").filter(part => part && part.trim());
+                if (parts.length < 7) continue;
+
+                if (parts[1] === "TMW_Archive") continue;
+
+                const seatCount = Number(parts[5]);
+                const productKey = (parts[6] || "").trim();
+
+                // Lines with lo= are already handled by the text-level check above.
+                if (line.includes("lo=")) continue;
+
+                if (line.includes("lr=") || hasTMWArchive || !line.includes("asset_info=")) {
+                    if (!(seatCount > 0)) {
+                        // PLP Individual is allowed (handled specially in the main parser).
+                        if (hasTMWArchive && !line.includes("asset_info=")) continue;
+                        errorMessageFunction("There is an issue with the license file: it contains an Individual or Designated Computer license, " +
+                            "which cannot use an options file.");
+                        return;
+                    }
+                } else {
+                    if (line.includes("PLATFORMS=x")) {
+                        errorMessageFunction("There is an issue with the license file: it contains a Designated Computer license generated from " +
+                            "a PLP on Windows, which cannot use an options file.");
+                        return;
+                    }
+                    if (productKey.length === 20 && !hasTMWArchive) {
+                        errorMessageFunction("There is an issue with the license file: it contains an Individual or Designated Computer license, " +
+                            "which cannot use an options file.");
+                        return;
+                    }
+                }
+            }
+        }
+
         // Now that you've passed, we'll go through each line of the license file to gather information needed for analysis.
         for (let licenseLineIndex = 0; licenseLineIndex < licenseFileContentsLines.length; licenseLineIndex++) {
             window.currentLine = licenseFileContentsLines[licenseLineIndex];
