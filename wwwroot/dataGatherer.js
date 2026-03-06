@@ -38,9 +38,7 @@ function gatherData() {
     const quoteRegex = /"/g;
     const whiteSpaceRegex = /\s+/g;
     const tabRegex = /\t/g;
-    const windowsNewLineRegex = /\\\r\n/g;
-    const unixNewLineRegex = /\\\n/g;
-    const newLineTabRegex = /\\\n\t/g;
+    const continuationRegex = /\\[ \t]*\r?\n(?:[ \t]*\r?\n)*[ \t]*/g;
 
     // Other.
     let containsPLP = false;
@@ -52,19 +50,16 @@ function gatherData() {
     try {
         // Remove line breaks from license file.
         window.licenseFileText = window.licenseFileRawText
-            .replace(windowsNewLineRegex, '')
-            .replace(unixNewLineRegex, '')
-            .replace(newLineTabRegex, '')
-            .replace(tabRegex, '');
+            .replace(continuationRegex, ' ')
+            .replace(tabRegex, ' ');
 
         // Break into lines, for later usage.
         const licenseFileContentsLines = window.licenseFileText.split(/\r\n|\r|\n/);
 
         // Same process for options file.
         window.optionsFileText = window.optionsFileRawText
-            .replace(windowsNewLineRegex, '')
-            .replace(unixNewLineRegex, '')
-            .replace(tabRegex, '');
+            .replace(continuationRegex, ' ')
+            .replace(tabRegex, ' ');
 
         const optionsFileContentsLines = optionsFileText.split(/\r\n|\r|\n/);
 

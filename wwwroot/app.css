@@ -209,3 +209,99 @@ body {
     margin-top: 4px;
     margin-bottom: 8px;
 }
+
+/* Drag-and-drop hint */
+.drag-drop-hint {
+    font-size: 12px;
+    color: #1e699b;
+    margin: 2px 0 4px;
+}
+
+/* Drag-and-drop overlay */
+.drop-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.drop-overlay.hidden {
+    display: none;
+}
+
+.drop-overlay-content {
+    border: 3px dashed #1e699b;
+    border-radius: 16px;
+    padding: 60px 80px;
+    text-align: center;
+    background: rgba(30, 105, 155, 0.08);
+}
+
+.drop-overlay-icon {
+    width: 56px;
+    height: 56px;
+    color: #1e699b;
+    margin: 0 auto 16px;
+    display: block;
+}
+
+.drop-overlay-text {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 8px;
+}
+
+.drop-overlay-subtext {
+    font-size: 14px;
+    color: #aaa;
+}
+
+/* File type prompt modal */
+.file-type-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.file-type-modal-overlay.hidden {
+    display: none;
+}
+
+.file-type-modal-dialog {
+    background: #2d2b2b;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.file-type-modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #e0e0e0;
+}
+
+.file-type-modal-message {
+    font-size: 14px;
+    color: #aaa;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.file-type-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}

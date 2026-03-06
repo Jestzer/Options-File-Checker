@@ -40,6 +40,9 @@
                 <input id="optionsFilePicker" type="file" style="display:none" accept=".opt" />
             </div>
 
+            <!-- Drag-and-drop hint -->
+            <div class="drag-drop-hint">You can also drag and drop files onto this page.</div>
+
             <!-- Row 4 – Output text block -->
             <div class="output-text" id="outputTextbox">
                 <p>Warning messages will appear here after analysis. Errors will appear in a pop-up window.</p>
@@ -57,6 +60,33 @@
             </div>
         </div>
     </div>
+    <!-- Drag-and-drop overlay -->
+    <div id="drop-overlay" class="drop-overlay hidden">
+        <div class="drop-overlay-content">
+            <svg class="drop-overlay-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+            </svg>
+            <div class="drop-overlay-text">Drop file to upload</div>
+            <div class="drop-overlay-subtext">License files (.lic, .dat) and Options files (.opt)</div>
+        </div>
+    </div>
+
+    <!-- File type prompt modal -->
+    <div id="file-type-modal-overlay" class="file-type-modal-overlay hidden">
+        <div class="file-type-modal-dialog">
+            <div class="file-type-modal-title">File Type</div>
+            <div class="file-type-modal-message" id="file-type-modal-message"></div>
+            <div class="file-type-modal-actions">
+                <button id="file-type-btn-license" class="btn">License File</button>
+                <button id="file-type-btn-options" class="btn">Options File</button>
+                <button id="file-type-btn-cancel" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript goodies -->
     <script src="version.js"></script>
     <script src="errorMessageFunction.js"></script>
@@ -66,6 +96,7 @@
     <script src="updateAnalyzerButtonState.js"></script>
     <script src="dataGatherer.js"></script>
     <script src="dataAnalyzer.js"></script>
+    <script src="dragDrop.js"></script>
 </body>
 
 </html>
