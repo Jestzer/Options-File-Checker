@@ -9,7 +9,7 @@ function initializeOptionsFilePicker() {
             optionsFilePicker.click();
         });
 
-        optionsFilePicker.addEventListener('change', (event) => {
+        optionsFilePicker.addEventListener('change', async (event) => {
             const files = event.target.files;
 
             // AFAIK, this means the user likely cancelled their selection, so move on with our lives.
@@ -19,6 +19,11 @@ function initializeOptionsFilePicker() {
 
             if (file.size === 0) {
                 errorMessageFunction("The options file you've chosen appears to be empty.");
+                return;
+            }
+
+            if (!await validateTextFile(file)) {
+                errorMessageFunction("The selected file appears to be a binary file (such as a PDF, image, or Word document), not a plain text options file.");
                 return;
             }
 

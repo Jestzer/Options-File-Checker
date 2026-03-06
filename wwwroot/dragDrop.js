@@ -121,6 +121,11 @@ function showFileTypePrompt(fileName) {
 }
 
 async function handleDroppedFile(file) {
+    if (!await validateTextFile(file)) {
+        errorMessageFunction(`"${file.name}" appears to be a binary file (such as a PDF, image, or Word document), not a plain text file.`);
+        return;
+    }
+
     let fileType = detectFileTypeFromExtension(file.name);
     const text = await readFileAsText(file);
 
