@@ -138,6 +138,12 @@ body {
     color: #777;
 }
 
+.diff-highlight {
+    font-weight: 700;
+    text-decoration: underline;
+    color: #fff;
+}
+
 /* Output tree view */
 .output-tree {
     flex: 1 1 0;

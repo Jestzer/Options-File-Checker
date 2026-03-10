@@ -20,6 +20,7 @@ function gatherData() {
     window.hostGroupDictionary = {};
     window.productExpirationDate = "No product expiration date set."
     window.useServerFound = false;
+    window.unrecognizedProductWarnings = [];
     window.currentLine = "window.currentLine has not been set. :("
 
 
@@ -615,10 +616,14 @@ function gatherData() {
 
                         clientType = lineParts[3];
 
-                        if (clientType !== "USER" && clientType !== "GROUP" && clientType !== "HOST" && clientType !== "HOST_GROUP" && clientType !== "DISPLAY" &&
-                            clientType !== "PROJECT" && clientType !== "INTERNET") {
-                            errorMessageFunction(`There is an issue with the options file: you have incorrectly specified the client type on a line using ${optionType}.` +
-                                `You attempted to use \"${clientType}\". Please reformat this ${optionType} line.`)
+                        if (!validateClientType(clientType)) {
+                            const spacedError = detectSpacedProductName(lineParts, 1, 3, currentLine, optionType, masterProductsList);
+                            if (spacedError) {
+                                errorMessageFunction(spacedError);
+                            } else {
+                                errorMessageFunction(`There is an issue with the options file: you have incorrectly specified the client type on a line using ${optionType}. ` +
+                                    `You attempted to use \"${clientType}\". Please reformat this ${optionType} line.`);
+                            }
                             return;
                         }
 
@@ -730,21 +735,22 @@ function gatherData() {
 
                 if (!productFoundInMasterList) {
                     let suggestion = findClosestProduct(productName, masterProductsList);
-                    let suggestionText = suggestion ? ` Did you mean \"${suggestion}\"?` : "";
-                    errorMessageFunction(`There is an issue with the options file: you have specified a product that does not exist. The product in question is \"${productName}\". ` +
-                        `Ensure there are no typos, the product name comes from the start of the INCREMENT line in the license file, and it has the exact same case-sensitivity.` +
-                        `${suggestionText} ` +
-                        `The line in question reads as this: \"${currentLine}\".`);
-                    return;
+                    window.unrecognizedProductWarnings.push({
+                        enteredProduct: productName,
+                        suggestedProduct: suggestion,
+                        line: currentLine
+                    });
                 }
 
                 // Validate your clientType.
-                if (clientType !== "USER" && clientType !== "GROUP" && clientType !== "HOST" && clientType !== "HOST_GROUP" && clientType !== "DISPLAY" &&
-                    clientType !== "PROJECT" && clientType !== "INTERNET") {
-                    if (!clientType || !clientType.trim()) {
+                if (!validateClientType(clientType)) {
+                    const spacedError = detectSpacedProductName(lineParts, 1, 2, currentLine, optionType, masterProductsList);
+                    if (spacedError) {
+                        errorMessageFunction(spacedError);
+                    } else if (!clientType || !clientType.trim()) {
                         errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type. It would typically be something like USER or GROUP, " +
                             `but yours is being detected as nothing. Please make sure you have formatted the line with client type correctly. The line in question reads as this: \"${currentLine}\".`);
-                    } else { // Who knows what you put in here.
+                    } else {
                         errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type. It would typically be something like USER or GROUP, " +
                             `but yours is being detected as ${clientType}. Please make sure you have formatted the line with client type correctly. The line in question reads as this: \"${currentLine}\".`);
                     }
@@ -894,6 +900,21 @@ function gatherData() {
                 let maxClientType = (lineParts[3]);
                 let maxClientSpecified = lineParts.slice(4).join(' ').trimEnd();
                 maxClientSpecified = maxClientSpecified.replace('"', "");
+
+                // Validate your clientType.
+                if (!validateClientType(maxClientType)) {
+                    const spacedError = detectSpacedProductName(lineParts, 2, 3, currentLine, "MAX", masterProductsList);
+                    if (spacedError) {
+                        errorMessageFunction(spacedError);
+                    } else if (!maxClientType || !maxClientType.trim()) {
+                        errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type on a MAX line. It would typically be something like USER or GROUP, " +
+                            `but yours is being detected as nothing. The line in question reads as this: \"${currentLine}\".`);
+                    } else {
+                        errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type on a MAX line. It would typically be something like USER or GROUP, " +
+                            `but yours is being detected as ${maxClientType}. The line in question reads as this: \"${currentLine}\".`);
+                    }
+                    return;
+                }
 
                 // Check for wildcards and IP addresses.
                 if (maxClientSpecified.includes("*")) {
@@ -1050,6 +1071,21 @@ function gatherData() {
                     reserveProductKey = "";
                 }
 
+                // Validate your clientType.
+                if (!validateClientType(reserveClientType)) {
+                    const spacedError = detectSpacedProductName(lineParts, 2, 3, currentLine, "RESERVE", masterProductsList);
+                    if (spacedError) {
+                        errorMessageFunction(spacedError);
+                    } else if (!reserveClientType || !reserveClientType.trim()) {
+                        errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type on a RESERVE line. It would typically be something like USER or GROUP, " +
+                            `but yours is being detected as nothing. The line in question reads as this: \"${currentLine}\".`);
+                    } else {
+                        errorMessageFunction("There is an issue with the options file: you have an incorrectly formatted client type on a RESERVE line. It would typically be something like USER or GROUP, " +
+                            `but yours is being detected as ${reserveClientType}. The line in question reads as this: \"${currentLine}\".`);
+                    }
+                    return;
+                }
+
                 // Check for wildcards and IP addresses.
                 if (reserveClientSpecified.includes("*")) {
                     window.wildCardsAreUsed = true;
@@ -1161,6 +1197,10 @@ function gatherData() {
                 if (ipAddressRegex.test(hostGroupClientSpecified)) {
                     window.ipAddressesAreUsed = true;
                 }
+            } else if (currentLine.trim().startsWith("USERCASEINSENSITIVE")) {
+                errorMessageFunction(`"USERCASEINSENSITIVE" is not a recognized FlexNet directive. Did you mean "GROUPCASEINSENSITIVE ON"? ` +
+                    `GROUPCASEINSENSITIVE applies to both GROUP and HOST_GROUP definitions. Line: "${currentLine}".`);
+                return;
             } else if (currentLine.trim().startsWith("GROUPCASEINSENSITIVE ON")) {
                 lastLineWasAGroupLine = false;
                 lastLineWasAHostGroupLine = false;
@@ -1335,6 +1375,30 @@ function levenshteinDistance(a, b) {
         }
     }
     return matrix[b.length][a.length];
+}
+
+const VALID_CLIENT_TYPES_SET = new Set(["USER", "GROUP", "HOST", "HOST_GROUP", "DISPLAY", "PROJECT", "INTERNET"]);
+
+function validateClientType(clientType) {
+    return VALID_CLIENT_TYPES_SET.has(clientType);
+}
+
+/**
+ * When an invalid client type is detected, check if the user may have used spaces
+ * instead of underscores in the product name. Scans forward for a valid client type;
+ * if found, the tokens in between are likely a multi-word product name.
+ */
+function detectSpacedProductName(lineParts, productStartIndex, clientTypeIndex, currentLine, type, masterList) {
+    for (let k = clientTypeIndex; k < lineParts.length; k++) {
+        if (validateClientType(lineParts[k])) {
+            const spacedName = lineParts.slice(productStartIndex, k).join(" ");
+            const underscoredName = lineParts.slice(productStartIndex, k).join("_");
+            const suggestion = findClosestProduct(underscoredName, masterList);
+            const suggestionText = suggestion ? ` Did you mean "${suggestion}"?` : "";
+            return `It looks like "${spacedName}" on this ${type} line is a product name with spaces. Product names in options files use underscores instead of spaces.${suggestionText} Line: "${currentLine}"`;
+        }
+    }
+    return null;
 }
 
 // Parse "dd-MMM-yyyy" into Date.
