@@ -1210,6 +1210,7 @@ function gatherData() {
             } else if (currentLine.trim().startsWith("TIMEOUTALL ") || currentLine.trim().startsWith("DEBUGLOG ") || currentLine.trim().startsWith("LINGER ") || currentLine.trim().startsWith("MAX_OVERDRAFT ")
                 || currentLine.trim().startsWith("REPORTLOG ") || currentLine.trim().startsWith("TIMEOUT ") || currentLine.trim().startsWith("BORROW ") || currentLine.trim().startsWith("NOLOG ")
                 || currentLine.trim().startsWith("DEFAULT ") || currentLine.trim().startsWith("HIDDEN ") || currentLine.trim().startsWith("MAX_BORROW_HOURS") || currentLine.trim().startsWith('#')
+                || currentLine.trim().startsWith("AUTOMATIC_REREAD ")
                 || !currentLine || !currentLine.trim() || currentLine.trim().startsWith("BORROW_LOWWATER ")) {
 
                 lastLineWasAGroupLine = false;
@@ -1230,6 +1231,12 @@ function gatherData() {
                             `It must be a positive integer (in seconds). The line in question reads as this: \"${currentLine}\".`);
                         return;
                     }
+                    if (timeoutValue > 0 && timeoutValue < 14400) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUTALL value of " + timeoutValue +
+                            " seconds is below the minimum of 14400 seconds (4 hours) accepted by most MathWorks products. " +
+                            "CNU products accept a minimum of 3600 seconds (1 hour).");
+                        return;
+                    }
                 } else if (trimmedLine.startsWith("TIMEOUT ")) {
                     let lineParts = trimmedLine.split(" ").filter(part => part.trim() !== "");
                     if (lineParts.length < 3) {
@@ -1241,6 +1248,17 @@ function gatherData() {
                     if (!Number.isInteger(timeoutValue) || timeoutValue < 0) {
                         errorMessageFunction("There is an issue with the options file: your TIMEOUT line has an invalid timeout value. " +
                             `It must be a positive integer (in seconds). The line in question reads as this: \"${currentLine}\".`);
+                        return;
+                    }
+                    if (timeoutValue > 0 && timeoutValue < 3600) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUT value of " + timeoutValue +
+                            " seconds for \"" + lineParts[1] + "\" is below the minimum of 3600 seconds (1 hour) accepted by any MathWorks product. " +
+                            "The minimum is 14400 seconds (4 hours) for non-CNU products.");
+                        return;
+                    } else if (timeoutValue >= 3600 && timeoutValue < 14400) {
+                        errorMessageFunction("There is an issue with the options file: your TIMEOUT value of " + timeoutValue +
+                            " seconds for \"" + lineParts[1] + "\" is below the minimum of 14400 seconds (4 hours) accepted by most MathWorks products. " +
+                            "Only CNU products accept a minimum of 3600 seconds (1 hour).");
                         return;
                     }
                 } else if (trimmedLine.startsWith("LINGER ")) {
